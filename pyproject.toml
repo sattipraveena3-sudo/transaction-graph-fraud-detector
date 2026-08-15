@@ -1,0 +1,6 @@
+[project]
+name="transaction-graph-fraud-detector"
+version="1.0.0"
+requires-python=">=3.11"
+[tool.pytest.ini_options]
+pythonpath=["."]
