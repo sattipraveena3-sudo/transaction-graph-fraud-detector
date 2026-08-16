@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Compile sources
+        run: python -m compileall -q app tests
+      - name: Run tests
+        run: pytest -q
+      - name: Build container
+        run: docker build -t transaction-graph-fraud-detector:ci .
+      - name: Start container
+        run: docker run -d --name fraud-detector -p 8000:8000 transaction-graph-fraud-detector:ci
+      - name: Smoke test running service
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:8000/ready; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/health
+          curl -fsS -X POST 'http://127.0.0.1:8000/api/demo?accounts=40&transactions=220&seed=11'
+          curl -fsS http://127.0.0.1:8000/api/summary
+          curl -fsS http://127.0.0.1:8000/api/alerts?limit=3
+          curl -fsS http://127.0.0.1:8000/api/graph?limit_edges=50
+          curl -fsS http://127.0.0.1:8000/metrics
+      - name: Container logs on failure
+        if: failure()
+        run: docker logs fraud-detector || true
