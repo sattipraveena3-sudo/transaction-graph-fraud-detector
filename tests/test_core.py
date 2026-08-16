@@ -28,7 +28,8 @@ def test_scoring_has_risk_and_explanation():
 def test_synthetic_ring_is_detectable():
     result = analyze_transactions(generate_transactions(80, 600), DetectionConfig(contamination=0.1))
     scored = result["scored"].set_index("account")
-    assert scored.loc["A0":"A4", "risk_score"].mean() > scored.risk_score.median()
+    ring = [f"A{i}" for i in range(5)]
+    assert scored.loc[ring, "risk_score"].mean() > scored.risk_score.median()
     assert result["metrics"]["precision"] >= 0
     assert result["metrics"]["recall"] >= 0
 
